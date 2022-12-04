@@ -2,12 +2,10 @@
 
 Servo servo;
 
+const int ledInterval = 100;
+
 using note = float;
-long clockCycles = 0;
-unsigned long previousMillis = 0;
-const long ledInterval = 500;
-int breakBlink = 0;
-int breakBlinkThreshold = 8; //make even number to stop at off
+
 
 struct Keys {
   int C = 4;
@@ -59,11 +57,14 @@ struct State {
   int mode = 0; // 0=Reproduce notes, 1=Perfect pitch
   int locked = 0; //0=locked, 1=not locked
   int ledState = 0; //0 = led off, 
-  long ledTimer = 0; //used as a basis to compare led effect time to clockCycles
   long buttonTimeout = 0; //used to make sure no double inputs for the button being held down.
   int enteredComboLength = 0; // length of combo already entered
+
+  unsigned int breakBlink = 9;           // dont start off blinking
+  unsigned int breakBlinkThreshold = 8; //make even number to stop at off
+  unsigned int blinkPreviousMillis = 0;
   note combo[3] = {notes.C, notes.D, notes.E};
-  note entered_combo[1000];
+  note entered_combo[100];
 };
  
 State state = State();
@@ -132,7 +133,7 @@ void checkKeys() {  //checks button input
 
     state.buttonTimeout++;
 
-    if(digitalRead(misc.master_button)) {
+    if(!digitalRead(misc.master_button)) {
       // master button is being pushed, user wants to enter this combo
 
 
@@ -143,7 +144,7 @@ void checkKeys() {  //checks button input
     //check all keys
     for(int keyIndex = 0; keyIndex<sizeof(keyArray); keyIndex++) {
       int key = keyArray[keyIndex];
-      if(digitalRead(key)) {
+      if(!digitalRead(key)) {
         // that key is being pushed, add it to the combo, ONLY if the timeout
         if(state.buttonTimeout >= 1000) { //wait time
           state.buttonTimeout = 0; //reset the timeout
@@ -169,27 +170,34 @@ void ledOff() {
 }
 
 void ledBlink() {
+
   unsigned long currentMillis = millis();
-    if (currentMillis - previousMillis >= ledInterval) {
-      previousMillis = currentMillis;
+    if (currentMillis - state.blinkPreviousMillis >= ledInterval) {
+      state.blinkPreviousMillis = currentMillis;
       if (state.ledState == 1) {
-        Serial.println("Hello");
         ledOff(); 
-        breakBlink++;
+        state.breakBlink++;
       } else if (state.ledState == 0) {
-        Serial.println("Goodbye");
         ledOn();
-        breakBlink++;
+        state.breakBlink++;
       }
   }
+}
+
+void ledTick() {
+  if(state.breakBlink <= state.breakBlinkThreshold) {
+    ledBlink();
+  }
+}
+
+void startLedBlink() {
+  state.breakBlink = 0;
 }
 
 void loop() { 
   checkShackle();
   checkKeys();
-  clockCycles++;  //used for timing effects
-  while (breakBlink < breakBlinkThreshold) {
-    ledBlink();
-  }
+
+  ledTick();
 
 }
