@@ -4,6 +4,8 @@ Servo servo;
 
 using note = float;
 long clockCycles = 0;
+unsigned long previousClock = 0;
+const long ledInterval = 10;
 
 struct Keys {
   int C = 4;
@@ -98,9 +100,11 @@ void setup() {
 void checkShackle() {
   if(digitalRead(misc.shackle_sense)) {
     servo_ctrl(1);
+    ledOn();
   }
   else {
     servo_ctrl(0);
+    ledOff();
   }
 }
 
@@ -128,13 +132,33 @@ void checkKeys() {  //checks button input
   }
 }
 
-void ledEffects() { //tick the LED effects based on state
+void ledOn() {
+  digitalWrite(misc.led, HIGH);
+}
 
+void ledOff() {
+  digitalWrite(misc.led, LOW);
+}
+
+void ledBlink() {
+    unsigned long currentClock = clockCycles;
+
+    if (currentClock - previousClock >= ledInterval) {
+      previousClock = currentClock;
+
+      if (State.ledState == 1) {
+        State.ledState == 0;
+        ledOff();
+      } else if (State.ledState == 0) {
+        State.ledState == 1;
+        ledOn();
+      }
+    }
 }
 
 void loop() { 
   checkShackle();
   checkKeys();
-  ledEffects();
+  //ledEffects();
   clockCycles++;  //used for timing effects
 }
