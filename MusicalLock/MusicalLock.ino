@@ -51,12 +51,15 @@ Misc misc = Misc();
 Keys keys = Keys();
 Notes notes = Notes();
 
+int keyArray[13] = {keys.C,keys.C_s,keys.D,keys.D_s,keys.E,keys.F,keys.F_s,keys.G,keys.G_s,keys.A,keys.A_s,keys.B,keys.C2};
+
 struct State {
   int mode = 0; // 0=Reproduce notes, 1=Perfect pitch
   int locked = 0; //0=locked, 1=not locked
   int ledState = 0; //0 = led off, 
   long ledTimer = 0; //used as a basis to compare led effect time to clockCycles
   long buttonTimeout = 0; //used to make sure no double inputs for the button being held down.
+  int enteredComboLength = 0; // length of combo already entered
   note combo[3] = {notes.C, notes.D, notes.E};
   note entered_combo[1000];
 };
@@ -82,6 +85,22 @@ void pinSetup() {
   pinMode(keys.A_s, INPUT_PULLUP);
   pinMode(keys.B, INPUT_PULLUP);
   pinMode(keys.C2, INPUT_PULLUP);
+}
+
+int fetchAssociatedNote(int key) { //fetch note from pin
+  if(key == keys.C) {return(notes.C);}
+  if(key == keys.C_s) {return(notes.C_s);}
+  if(key == keys.D) {return(notes.D);}
+  if(key == keys.D_s) {return(notes.D_s);}
+  if(key == keys.E) {return(notes.E);}
+  if(key == keys.F) {return(notes.F);}
+  if(key == keys.F_s) {return(notes.F_s);}
+  if(key == keys.G) {return(notes.G);}
+  if(key == keys.G_s) {return(notes.G_s);}
+  if(key == keys.A) {return(notes.A);}
+  if(key == keys.A_s) {return(notes.A_s);}
+  if(key == keys.B) {return(notes.B);}
+  if(key == keys.C2) {return(notes.C2);}
 }
 
 void servo_ctrl(int action) {
@@ -111,21 +130,28 @@ void checkShackle() {
 void checkKeys() {  //checks button input
   if(state.mode == 0) {
 
-    buttonTimeout++;
+    state.buttonTimeout++;
 
     if(digitalRead(misc.master_button)) {
       // master button is being pushed, user wants to enter this combo
 
+
+      //reset combo (will be overwritten)
+      state.enteredComboLength = 0;
     }
 
     //check all keys
-    for(int key : keys) {
+    for(int keyIndex = 0; keyIndex<sizeof(keyArray); keyIndex++) {
+      int key = keyArray[keyIndex];
       if(digitalRead(key)) {
         // that key is being pushed, add it to the combo, ONLY if the timeout
-        if(buttonTimeout >= 1000) { //wait time
-          buttonTimeout = 0; //reset the timeout
+        if(state.buttonTimeout >= 1000) { //wait time
+          state.buttonTimeout = 0; //reset the timeout
 
           //now register the button into the entered combination arrays.
+          state.entered_combo[state.enteredComboLength] = fetchAssociatedNote(key);
+          state.enteredComboLength++;
+          
         }
       }
     }
