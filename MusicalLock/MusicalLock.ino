@@ -4,8 +4,10 @@ Servo servo;
 
 using note = float;
 long clockCycles = 0;
-unsigned long previousClock = 0;
-const long ledInterval = 10;
+unsigned long previousMillis = 0;
+const long ledInterval = 500;
+int breakBlink = 0;
+int breakBlinkThreshold = 8; //make even number to stop at off
 
 struct Keys {
   int C = 4;
@@ -99,11 +101,9 @@ void setup() {
 void checkShackle() {
   if(digitalRead(misc.shackle_sense)) {
     servo_ctrl(1);
-    ledOn();
   }
   else {
     servo_ctrl(0);
-    ledOff();
   }
 }
 
@@ -113,31 +113,36 @@ void checkKeys() {  //checks button input
 
 void ledOn() {
   digitalWrite(misc.led, HIGH);
+  state.ledState = 1;
 }
 
 void ledOff() {
   digitalWrite(misc.led, LOW);
+  state.ledState = 0;
 }
 
 void ledBlink() {
-    unsigned long currentClock = clockCycles;
-
-    if (currentClock - previousClock >= ledInterval) {
-      previousClock = currentClock;
-
-      if (State.ledState == 1) {
-        State.ledState == 0;
-        ledOff();
-      } else if (State.ledState == 0) {
-        State.ledState == 1;
+  unsigned long currentMillis = millis();
+    if (currentMillis - previousMillis >= ledInterval) {
+      previousMillis = currentMillis;
+      if (state.ledState == 1) {
+        Serial.println("Hello");
+        ledOff(); 
+        breakBlink++;
+      } else if (state.ledState == 0) {
+        Serial.println("Goodbye");
         ledOn();
+        breakBlink++;
       }
-    }
+  }
 }
 
 void loop() { 
   checkShackle();
   checkKeys();
-  //ledEffects();
   clockCycles++;  //used for timing effects
+  while (breakBlink < breakBlinkThreshold) {
+    ledBlink();
+  }
+
 }
