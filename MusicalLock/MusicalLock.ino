@@ -5,8 +5,7 @@ Servo servo;
 using note = float;
 long clockCycles = 0;
 
-struct Buttons {
-  int master = 2;
+struct Keys {
   int C = 4;
   int C_s = 5;
   int D = 6;
@@ -27,6 +26,7 @@ struct Misc {
   int led = 12;
   int servo = 11;
   int shackle_sense = 13;
+  int master_button = 2; //maser button
 };
 
 struct Notes {
@@ -65,7 +65,7 @@ void pinSetup() {
   pinMode(misc.led, OUTPUT);
   servo.attach(misc.servo);
   pinMode(misc.shackle_sense, INPUT_PULLUP);
-  pinMode(buttons.master, INPUT_PULLUP);
+  pinMode(misc.master_button, INPUT_PULLUP);
   pinMode(buttons.C, INPUT_PULLUP);
   pinMode(buttons.C_s, INPUT_PULLUP);
   pinMode(buttons.D, INPUT_PULLUP);
