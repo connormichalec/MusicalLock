@@ -46,7 +46,7 @@ struct Notes {
 };
 
 Misc misc = Misc();
-Buttons buttons = Buttons();
+Keys keys = Keys();
 Notes notes = Notes();
 
 struct State {
@@ -66,19 +66,19 @@ void pinSetup() {
   servo.attach(misc.servo);
   pinMode(misc.shackle_sense, INPUT_PULLUP);
   pinMode(misc.master_button, INPUT_PULLUP);
-  pinMode(buttons.C, INPUT_PULLUP);
-  pinMode(buttons.C_s, INPUT_PULLUP);
-  pinMode(buttons.D, INPUT_PULLUP);
-  pinMode(buttons.D_s, INPUT_PULLUP);
-  pinMode(buttons.E, INPUT_PULLUP);
-  pinMode(buttons.F, INPUT_PULLUP);
-  pinMode(buttons.F_s, INPUT_PULLUP);
-  pinMode(buttons.G, INPUT_PULLUP);
-  pinMode(buttons.G_s, INPUT_PULLUP);
-  pinMode(buttons.A, INPUT_PULLUP);
-  pinMode(buttons.A_s, INPUT_PULLUP);
-  pinMode(buttons.B, INPUT_PULLUP);
-  pinMode(buttons.C2, INPUT_PULLUP);
+  pinMode(keys.C, INPUT_PULLUP);
+  pinMode(keys.C_s, INPUT_PULLUP);
+  pinMode(keys.D, INPUT_PULLUP);
+  pinMode(keys.D_s, INPUT_PULLUP);
+  pinMode(keys.E, INPUT_PULLUP);
+  pinMode(keys.F, INPUT_PULLUP);
+  pinMode(keys.F_s, INPUT_PULLUP);
+  pinMode(keys.G, INPUT_PULLUP);
+  pinMode(keys.G_s, INPUT_PULLUP);
+  pinMode(keys.A, INPUT_PULLUP);
+  pinMode(keys.A_s, INPUT_PULLUP);
+  pinMode(keys.B, INPUT_PULLUP);
+  pinMode(keys.C2, INPUT_PULLUP);
 }
 
 void servo_ctrl(int action) {
@@ -114,6 +114,6 @@ void ledEffects() { //tick the LED effects based on state
 void loop() { 
   checkShackle();
   checkKeys();
-  ledEffects();   
+  ledEffects();
   clockCycles++;  //used for timing effects
 }
