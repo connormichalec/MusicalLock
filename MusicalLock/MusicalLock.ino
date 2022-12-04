@@ -58,8 +58,9 @@ struct State {
   int locked = 0; //0=locked, 1=not locked
   int ledState = 0; //0 = led off, 
   long ledTimer = 0; //used as a basis to compare led effect time to clockCycles
+  long buttonTimeout = 0; //used to make sure no double inputs for the button being held down.
   note combo[3] = {notes.C, notes.D, notes.E};
-  note entered_combo[sizeof(combo)];
+  note entered_combo[1000];
 };
  
 State state = State();
@@ -108,7 +109,27 @@ void checkShackle() {
 }
 
 void checkKeys() {  //checks button input
+  if(state.mode == 0) {
 
+    buttonTimeout++;
+
+    if(digitalRead(misc.master_button)) {
+      // master button is being pushed, user wants to enter this combo
+
+    }
+
+    //check all keys
+    for(int key : keys) {
+      if(digitalRead(key)) {
+        // that key is being pushed, add it to the combo, ONLY if the timeout
+        if(buttonTimeout >= 1000) { //wait time
+          buttonTimeout = 0; //reset the timeout
+
+          //now register the button into the entered combination arrays.
+        }
+      }
+    }
+  }
 }
 
 void ledOn() {
