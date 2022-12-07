@@ -63,6 +63,9 @@ struct State {
   unsigned int breakBlink = 9;           // dont start off blinking
   unsigned int breakBlinkThreshold = 8; //make even number to stop at off
   unsigned int blinkPreviousMillis = 0;
+
+  bool unlockedShackleStillIn = false;  // when device in unlocked, wait for user to pull shackle out.
+
   note combo[3] = {notes.C, notes.D, notes.E};
   note entered_combo[100];
 };
@@ -120,42 +123,11 @@ void setup() {
 }
 
 void checkShackle() {
-  if(digitalRead(misc.shackle_sense)) {
-    servo_ctrl(1);
+  if(digitalRead(misc.shackle_sense) && !state.unlockedShackleStillIn) {
+    lock();
   }
-  else {
-    servo_ctrl(0);
-  }
-}
-
-void checkKeys() {  //checks button input
-  if(state.mode == 0) {
-
-    state.buttonTimeout++;
-
-    if(!digitalRead(misc.master_button)) {
-      // master button is being pushed, user wants to enter this combo
-
-
-      //reset combo (will be overwritten)
-      state.enteredComboLength = 0;
-    }
-
-    //check all keys
-    for(int keyIndex = 0; keyIndex<sizeof(keyArray); keyIndex++) {
-      int key = keyArray[keyIndex];
-      if(!digitalRead(key)) {
-        // that key is being pushed, add it to the combo, ONLY if the timeout
-        if(state.buttonTimeout >= 1000) { //wait time
-          state.buttonTimeout = 0; //reset the timeout
-
-          //now register the button into the entered combination arrays.
-          state.entered_combo[state.enteredComboLength] = fetchAssociatedNote(key);
-          state.enteredComboLength++;
-          
-        }
-      }
-    }
+  else if(!digitalRead(misc.shackle_sense)) {
+    state.unlockedShackleStillIn = false; //user pulled out shackle.
   }
 }
 
@@ -192,6 +164,59 @@ void ledTick() {
 
 void startLedBlink() {
   state.breakBlink = 0;
+}
+
+void unlock() {
+  state.unlockedShackleStillIn = true;
+}
+
+void lock() {
+
+}
+
+void checkKeys() {  //checks button input
+  if(state.mode == 0) {
+
+    state.buttonTimeout++;
+
+    if(!digitalRead(misc.master_button)) {
+      // master button is being pushed, user wants to enter this combo
+
+      for(int comboIndex = 0; comboIndex++; comboIndex<state.enteredComboLength) {
+        if(state.entered_combo[comboIndex]!=state.combo[comboIndex]) {
+          //combo mismatch
+          break;
+        }
+
+        if(comboIndex == (state.enteredComboLength-1)) {
+          //made it to end of combo, correct password, unlock
+          unlock();
+
+          
+        }
+      }
+
+
+      //reset combo (will be overwritten)
+      state.enteredComboLength = 0;
+    }
+
+    //check all keys
+    for(int keyIndex = 0; keyIndex<sizeof(keyArray); keyIndex++) {
+      int key = keyArray[keyIndex];
+      if(!digitalRead(key)) {
+        // that key is being pushed, add it to the combo, ONLY if the timeout
+        if(state.buttonTimeout >= 1000) { //wait time
+          state.buttonTimeout = 0; //reset the timeout
+
+          //now register the button into the entered combination arrays.
+          state.entered_combo[state.enteredComboLength] = fetchAssociatedNote(key);
+          state.enteredComboLength++;
+          
+        }
+      }
+    }
+  }
 }
 
 void loop() { 
