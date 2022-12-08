@@ -2,19 +2,21 @@
 
 Servo servo;
 
-const int ledInterval = 100;
+using note_freq = float;
 
-using note = float;
+unsigned int ledBlinkInterval = 100;
+unsigned int ledBlinkTimes = 50;
+
 
 
 struct Keys {
-  int C = 4;
-  int C_s = 5;
-  int D = 6;
-  int D_s = 7;
-  int E = 8;
-  int F = 9;
-  int F_s = 10;
+  int C = 3;
+  int C_s = 4;
+  int D = 5;
+  int D_s = 6;
+  int E = 7;
+  int F = 8;
+  int F_s = 9;
   int G = A0;
   int G_s = A1;
   int A = A2;
@@ -32,19 +34,19 @@ struct Misc {
 };
 
 struct Notes {
-  note C = 261.63*2;
-  note C_s = 277.18*2;
-  note D = 293.66*2;
-  note D_s = 311.13*2;
-  note E = 329.63*2;
-  note F = 349.23*2;
-  note F_s = 369.99*2;
-  note G = 392.00*2;
-  note G_s = 415.30*2;
-  note A = 440.00*2;
-  note A_s = 466.16*2;
-  note B = 493.88*2;
-  note C2 = 523.25*2;
+  note_freq C = 261.63*2;
+  note_freq C_s = 277.18*2;
+  note_freq D = 293.66*2;
+  note_freq D_s = 311.13*2;
+  note_freq E = 329.63*2;
+  note_freq F = 349.23*2;
+  note_freq F_s = 369.99*2;
+  note_freq G = 392.00*2;
+  note_freq G_s = 415.30*2;
+  note_freq A = 440.00*2;
+  note_freq A_s = 466.16*2;
+  note_freq B = 493.88*2;
+  note_freq C2 = 523.25*2;
 };
 
 Misc misc = Misc();
@@ -55,19 +57,18 @@ int keyArray[13] = {keys.C,keys.C_s,keys.D,keys.D_s,keys.E,keys.F,keys.F_s,keys.
 
 struct State {
   int mode = 0; // 0=Reproduce notes, 1=Perfect pitch
-  int locked = 0; //0=locked, 1=not locked
+  int shackle_locked = 0; //0=locked, 1=not locked
   int ledState = 0; //0 = led off, 
   long buttonTimeout = 0; //used to make sure no double inputs for the button being held down.
   int enteredComboLength = 0; // length of combo already entered
 
-  unsigned int breakBlink = 9;           // dont start off blinking
-  unsigned int breakBlinkThreshold = 8; //make even number to stop at off
+  unsigned int breakBlink = 0;
   unsigned int blinkPreviousMillis = 0;
 
   bool unlockedShackleStillIn = false;  // when device in unlocked, wait for user to pull shackle out.
 
-  note combo[3] = {notes.C, notes.D, notes.E};
-  note entered_combo[100];
+  int combo[2] = {keys.D, keys.D_s};
+  int entered_combo[100];
 };
  
 State state = State();
@@ -111,15 +112,11 @@ int fetchAssociatedNote(int key) { //fetch note from pin
 
 void servo_ctrl(int action) {
   if( action == 0) {      // unlock
-    state.locked = 0;
+    state.shackle_locked = 0;
   }
-  else if (action == 1) {  //lock 
-    state.locked = 1;
+  else if (action == 1) {  //lock
+    state.shackle_locked = 1;
   }
-}
-
-void setup() {
-  pinSetup();
 }
 
 void checkShackle() {
@@ -144,85 +141,112 @@ void ledOff() {
 void ledBlink() {
 
   unsigned long currentMillis = millis();
-    if (currentMillis - state.blinkPreviousMillis >= ledInterval) {
+    if (currentMillis - state.blinkPreviousMillis >= ledBlinkInterval) {
       state.blinkPreviousMillis = currentMillis;
       if (state.ledState == 1) {
         ledOff(); 
-        state.breakBlink++;
+        state.breakBlink--;
       } else if (state.ledState == 0) {
         ledOn();
-        state.breakBlink++;
+        state.breakBlink--;
       }
   }
 }
 
-void ledTick() {
-  if(state.breakBlink <= state.breakBlinkThreshold) {
+void ledBlinkTick() {
+  if(state.breakBlink > 0) {
     ledBlink();
+  }
+  else {
+    ledOff(); // just make sure the led is shut off at the end
   }
 }
 
 void startLedBlink() {
-  state.breakBlink = 0;
+  state.breakBlink = ledBlinkTimes;
 }
 
 void unlock() {
-  state.unlockedShackleStillIn = true;
+  servo_ctrl(0);
+  state.unlockedShackleStillIn = true;  // now wait for user to pull out shackle
 }
 
 void lock() {
-
+  servo_ctrl(1);
 }
 
 void checkKeys() {  //checks button input
-  if(state.mode == 0) {
+  state.buttonTimeout++;
+  
+  if(state.buttonTimeout > 50000 ) { //wait time
 
-    state.buttonTimeout++;
+    if(state.mode == 0) {
 
-    if(!digitalRead(misc.master_button)) {
-      // master button is being pushed, user wants to enter this combo
+      if(digitalRead(misc.master_button) == LOW) {
+        state.buttonTimeout = 0; //reset the timeout
 
-      for(int comboIndex = 0; comboIndex++; comboIndex<state.enteredComboLength) {
-        if(state.entered_combo[comboIndex]!=state.combo[comboIndex]) {
-          //combo mismatch
-          break;
-        }
-
-        if(comboIndex == (state.enteredComboLength-1)) {
-          //made it to end of combo, correct password, unlock
-          unlock();
-
+        // master button is being pushed, user wants to enter this combo
+  
+        int correctNotes = 0;
+        int comboIndex;
+        for(comboIndex = 0; comboIndex<state.enteredComboLength; comboIndex++) {
           
+          if(state.entered_combo[comboIndex] == state.combo[comboIndex]) {
+            //combo match
+            correctNotes++;
+          }
         }
+
+        if((comboIndex == correctNotes) && (state.enteredComboLength == (sizeof(state.combo)/sizeof(int)))) {
+          //correct combo
+          ledBlinkInterval = 30;
+          ledBlinkTimes = 20;
+          startLedBlink();
+          unlock();
+        }
+        else {
+          //incorrect combo
+          ledBlinkInterval = 100;
+          ledBlinkTimes = 8;
+          startLedBlink();
+        }
+
+
+        //reset combo (will be overwritten)
+        state.enteredComboLength = 0;
       }
 
-
-      //reset combo (will be overwritten)
-      state.enteredComboLength = 0;
-    }
-
-    //check all keys
-    for(int keyIndex = 0; keyIndex<sizeof(keyArray); keyIndex++) {
-      int key = keyArray[keyIndex];
-      if(!digitalRead(key)) {
-        // that key is being pushed, add it to the combo, ONLY if the timeout
-        if(state.buttonTimeout >= 1000) { //wait time
+      //check all keys
+      for(int keyIndex = 0; keyIndex<(sizeof(keyArray)/sizeof(int)); keyIndex++) {
+        int key = keyArray[keyIndex];
+        if(digitalRead(key) == LOW) {
+          Serial.println(key);
           state.buttonTimeout = 0; //reset the timeout
+          
+          // that key is being pushed, add it to the combo
 
           //now register the button into the entered combination arrays.
-          state.entered_combo[state.enteredComboLength] = fetchAssociatedNote(key);
+          state.entered_combo[state.enteredComboLength] = key;
           state.enteredComboLength++;
-          
+
+          tone(misc.speaker, fetchAssociatedNote(key), 500);
+            
         }
       }
     }
   }
+}
+
+void setup() {
+  pinSetup();
+  unlock();
+  Serial.begin(9600);
 }
 
 void loop() { 
   checkShackle();
   checkKeys();
 
-  ledTick();
+  ledBlinkTick();
 
 }
