@@ -14,15 +14,15 @@ struct Keys {
   int C_s = 4;
   int D = 5;
   int D_s = 6;
-  int E = 7;
+  int E = 1; // pin tx (will be put into digital mode)
   int F = 8;
   int F_s = 9;
-  int G = A0;
-  int G_s = A1;
-  int A = A2;
-  int A_s = A3;
-  int B = A4;
-  int C2 = A5;
+  int G = 14;
+  int G_s = 15;
+  int A = 16;
+  int A_s = 17;
+  int B = 18;
+  int C2 = 19;
 };
 
 struct Misc {
@@ -30,7 +30,7 @@ struct Misc {
   int led = 12;
   int servo = 11;
   int shackle_sense = 13;
-  int master_button = 2; //maser button
+  int master_button = 0; //rx (will be put into digital mode)
 };
 
 struct Notes {
@@ -59,8 +59,10 @@ struct State {
   int mode = 0; // 0=Reproduce notes, 1=Perfect pitch
   int shackle_locked = 0; //0=locked, 1=not locked
   int ledState = 0; //0 = led off, 
-  long buttonTimeout = 0; //used to make sure no double inputs for the button being held down.
   int enteredComboLength = 0; // length of combo already entered
+
+  bool masterButtonBreak = false; // used to make sure button is only registered once when pressed
+  bool keyButtonBreak = false;
 
   unsigned int breakBlink = 0;
   unsigned int blinkPreviousMillis = 0;
@@ -176,17 +178,13 @@ void lock() {
 }
 
 void checkKeys() {  //checks button input
-  state.buttonTimeout++;
-  
-  if(state.buttonTimeout > 50000 ) { //wait time
 
-    if(state.mode == 0) {
+  if(state.mode == 0) {
 
-      if(digitalRead(misc.master_button) == LOW) {
-        state.buttonTimeout = 0; //reset the timeout
+    if(digitalRead(misc.master_button) == LOW) {
+      // master button is being pushed, user wants to enter this combo
+      if(!state.masterButtonBreak) {
 
-        // master button is being pushed, user wants to enter this combo
-  
         int correctNotes = 0;
         int comboIndex;
         for(comboIndex = 0; comboIndex<state.enteredComboLength; comboIndex++) {
@@ -214,15 +212,22 @@ void checkKeys() {  //checks button input
 
         //reset combo (will be overwritten)
         state.enteredComboLength = 0;
-      }
 
-      //check all keys
-      for(int keyIndex = 0; keyIndex<(sizeof(keyArray)/sizeof(int)); keyIndex++) {
-        int key = keyArray[keyIndex];
-        if(digitalRead(key) == LOW) {
-          Serial.println(key);
-          state.buttonTimeout = 0; //reset the timeout
-          
+        state.masterButtonBreak = true; // enable button break
+      }
+    }
+    else {
+      // master button went high, turn off button break
+      state.masterButtonBreak = false;
+    }
+
+    int highButtons = 0;
+    //check all keys
+    for(int keyIndex = 0; keyIndex<(sizeof(keyArray)/sizeof(int)); keyIndex++) {
+      int key = keyArray[keyIndex];
+      if(digitalRead(key) == LOW) {
+
+        if(!state.keyButtonBreak) {
           // that key is being pushed, add it to the combo
 
           //now register the button into the entered combination arrays.
@@ -230,9 +235,19 @@ void checkKeys() {  //checks button input
           state.enteredComboLength++;
 
           tone(misc.speaker, fetchAssociatedNote(key), 500);
-            
+
+          state.keyButtonBreak = true; // enable button break for all keys
         }
       }
+      else {
+        // a button went high, only disable button break if all buttons went high.
+        highButtons++;
+      }
+    }
+
+    if(highButtons == sizeof(keyArray)/sizeof(int)) {
+      // all buttons were high, disable button break
+      state.keyButtonBreak = false;
     }
   }
 }
@@ -240,7 +255,6 @@ void checkKeys() {  //checks button input
 void setup() {
   pinSetup();
   unlock();
-  Serial.begin(9600);
 }
 
 void loop() { 
@@ -248,5 +262,4 @@ void loop() {
   checkKeys();
 
   ledBlinkTick();
-
 }
