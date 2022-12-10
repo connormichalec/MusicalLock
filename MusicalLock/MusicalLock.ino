@@ -5,7 +5,7 @@ Servo servo;
 using note_freq = float;
 
 unsigned int ledBlinkInterval = 100;
-unsigned int ledBlinkTimes = 50;
+unsigned int ledBlinkTimes = 8;
 
 
 
@@ -53,7 +53,7 @@ Misc misc = Misc();
 Keys keys = Keys();
 Notes notes = Notes();
 
-int keyArray[13] = {keys.C,keys.C_s,keys.D,keys.D_s,keys.E,keys.F,keys.F_s,keys.G,keys.G_s,keys.A,keys.A_s,keys.B,keys.C2};
+int keyArray[13] = {keys.C, keys.C_s,keys.D,keys.D_s,keys.E,keys.F,keys.F_s,keys.G,keys.G_s,keys.A,keys.A_s,keys.B,keys.C2};
 
 struct State {
   int mode = 0; // 0=Reproduce notes, 1=Perfect pitch
@@ -69,7 +69,7 @@ struct State {
 
   bool unlockedShackleStillIn = false;  // when device in unlocked, wait for user to pull shackle out.
 
-  int combo[2] = {keys.D, keys.D_s};
+  int combo[10] = {keys.C, keys.D_s, keys.F, keys.F_s, keys.F, keys.D_s, keys.C, keys.A_s, keys.D, keys.C}; // need to !amongus! to unlock
   int entered_combo[100];
 };
  
@@ -115,9 +115,11 @@ int fetchAssociatedNote(int key) { //fetch note from pin
 void servo_ctrl(int action) {
   if( action == 0) {      // unlock
     state.shackle_locked = 0;
+    servo.write(45);
   }
   else if (action == 1) {  //lock
     state.shackle_locked = 1;
+    servo.write(0);
   }
 }
 
@@ -255,11 +257,13 @@ void checkKeys() {  //checks button input
 void setup() {
   pinSetup();
   unlock();
+  startLedBlink();
 }
 
 void loop() { 
+
   checkShackle();
   checkKeys();
-
   ledBlinkTick();
+
 }
