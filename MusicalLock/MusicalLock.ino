@@ -120,20 +120,27 @@ int fetchAssociatedNote(int key) { //fetch note from pin
 void servo_ctrl(int action) {
   if( action == 0) {      // unlock
     state.shackle_locked = 0;
-    servo.write(45);
+    servo.write(150);
   }
   else if (action == 1) {  //lock
     state.shackle_locked = 1;
-    servo.write(0);
+    servo.write(30);
   }
 }
 
 void checkShackle() {
-  if(digitalRead(misc.shackle_sense) && !state.unlockedShackleStillIn) {
+  if((digitalRead(misc.shackle_sense) == HIGH) && !state.unlockedShackleStillIn) {  // SO pin 13 is always being grounded for sum reason (my suspicion is that its the SCK signal) so instead of treating like a PULLUP, here i am treating like PULLDOWn
     lock();
   }
   else if(!digitalRead(misc.shackle_sense)) {
     state.unlockedShackleStillIn = false; //user pulled out shackle.
+  }
+}
+
+// because the servo automatically moves to a position when ardunio is powered on, if the shackle is in, lock( do nothing because checkShackle will do this automatically). However, if shackle is not in, automatically move to the unlock position.
+void startupShackle() {
+  if(!digitalRead(misc.shackle_sense) == HIGH) { // again this is high because pin 13 is being pulled down to LOW automatically for some reason (not sure)
+    unlock(); // unlock on start.
   }
 }
 
@@ -265,8 +272,9 @@ void checkKeys() {  //checks button input
 
 void setup() {
   pinSetup();
-  unlock();
   startLedBlink();
+  state.unlockedShackleStillIn = false; // we want to await the shackle, if its in, moved to lock regardless of whatever the state we currently are in.
+  startupShackle();
 }
 
 void loop() { 
