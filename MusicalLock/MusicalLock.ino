@@ -71,7 +71,7 @@ struct State {
   unsigned int breakBlink = 0;
   unsigned long blinkPreviousMillis = 0;
 
-  bool unlockedShackleStillIn = false;  // when device in unlocked, wait for user to pull shackle out.
+  bool unlockedShackleStillIn;  // when device in unlocked, wait for user to pull shackle out.
 
   int combo[10] = {keys.E, keys.G, keys.A, keys.A_s, keys.A, keys.G, keys.E, keys.D, keys.F_s, keys.E}; // need to !amongus! to unlock
 
@@ -132,7 +132,7 @@ void checkShackle() {
   if((digitalRead(misc.shackle_sense) == HIGH) && !state.unlockedShackleStillIn) {  // SO pin 13 is always being grounded for sum reason (my suspicion is that its the SCK signal) so instead of treating like a PULLUP, here i am treating like PULLDOWn
     lock();
   }
-  else if(!digitalRead(misc.shackle_sense)) {
+  else if(digitalRead(misc.shackle_sense) == LOW) {
     state.unlockedShackleStillIn = false; //user pulled out shackle.
   }
 }
