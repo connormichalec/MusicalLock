@@ -69,7 +69,8 @@ struct State {
 
   bool unlockedShackleStillIn = false;  // when device in unlocked, wait for user to pull shackle out.
 
-  int combo[10] = {keys.C, keys.D_s, keys.F, keys.F_s, keys.F, keys.D_s, keys.C, keys.A_s, keys.D, keys.C}; // need to !amongus! to unlock
+  int combo[10] = {keys.E, keys.G, keys.A, keys.A_s, keys.A, keys.G, keys.E, keys.D, keys.F_s, keys.E}; // need to !amongus! to unlock
+
   int entered_combo[100];
 };
  
@@ -186,7 +187,6 @@ void checkKeys() {  //checks button input
     if(digitalRead(misc.master_button) == LOW) {
       // master button is being pushed, user wants to enter this combo
       if(!state.masterButtonBreak) {
-
         int correctNotes = 0;
         int comboIndex;
         for(comboIndex = 0; comboIndex<state.enteredComboLength; comboIndex++) {
@@ -216,6 +216,8 @@ void checkKeys() {  //checks button input
         state.enteredComboLength = 0;
 
         state.masterButtonBreak = true; // enable button break
+
+        delay(50);  // needed because button appears to oscillate
       }
     }
     else {
@@ -236,9 +238,11 @@ void checkKeys() {  //checks button input
           state.entered_combo[state.enteredComboLength] = key;
           state.enteredComboLength++;
 
-          tone(misc.speaker, fetchAssociatedNote(key), 500);
+          tone(misc.speaker, fetchAssociatedNote(key), 300);
 
           state.keyButtonBreak = true; // enable button break for all keys
+
+          delay(50);  // needed because button appears to oscillate
         }
       }
       else {
