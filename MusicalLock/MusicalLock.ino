@@ -7,6 +7,8 @@ using note_freq = float;
 unsigned int ledBlinkInterval = 100;
 unsigned int ledBlinkTimes = 8;
 
+unsigned int buttonTimeout = 50;
+
 
 
 struct Keys {
@@ -64,8 +66,10 @@ struct State {
   bool masterButtonBreak = false; // used to make sure button is only registered once when pressed
   bool keyButtonBreak = false;
 
+  unsigned long lastPressedTime = 0;
+
   unsigned int breakBlink = 0;
-  unsigned int blinkPreviousMillis = 0;
+  unsigned long blinkPreviousMillis = 0;
 
   bool unlockedShackleStillIn = false;  // when device in unlocked, wait for user to pull shackle out.
 
@@ -182,78 +186,79 @@ void lock() {
 
 void checkKeys() {  //checks button input
 
-  if(state.mode == 0) {
+  if((millis() - state.lastPressedTime) > buttonTimeout) {
 
-    if(digitalRead(misc.master_button) == LOW) {
-      // master button is being pushed, user wants to enter this combo
-      if(!state.masterButtonBreak) {
-        int correctNotes = 0;
-        int comboIndex;
-        for(comboIndex = 0; comboIndex<state.enteredComboLength; comboIndex++) {
-          
-          if(state.entered_combo[comboIndex] == state.combo[comboIndex]) {
-            //combo match
-            correctNotes++;
+    state.lastPressedTime = millis();
+
+    if(state.mode == 0) {
+
+      if(digitalRead(misc.master_button) == LOW) {
+        // master button is being pushed, user wants to enter this combo
+        if(!state.masterButtonBreak) {
+          int correctNotes = 0;
+          int comboIndex;
+          for(comboIndex = 0; comboIndex<state.enteredComboLength; comboIndex++) {
+            
+            if(state.entered_combo[comboIndex] == state.combo[comboIndex]) {
+              //combo match
+              correctNotes++;
+            }
           }
-        }
 
-        if((comboIndex == correctNotes) && (state.enteredComboLength == (sizeof(state.combo)/sizeof(int)))) {
-          //correct combo
-          ledBlinkInterval = 30;
-          ledBlinkTimes = 20;
-          startLedBlink();
-          unlock();
-        }
-        else {
-          //incorrect combo
-          ledBlinkInterval = 100;
-          ledBlinkTimes = 8;
-          startLedBlink();
-        }
+          if((comboIndex == correctNotes) && (state.enteredComboLength == (sizeof(state.combo)/sizeof(int)))) {
+            //correct combo
+            ledBlinkInterval = 30;
+            ledBlinkTimes = 20;
+            startLedBlink();
+            unlock();
+          }
+          else {
+            //incorrect combo
+            ledBlinkInterval = 100;
+            ledBlinkTimes = 8;
+            startLedBlink();
+          }
 
 
-        //reset combo (will be overwritten)
-        state.enteredComboLength = 0;
+          //reset combo (will be overwritten)
+          state.enteredComboLength = 0;
 
-        state.masterButtonBreak = true; // enable button break
-
-        delay(50);  // needed because button appears to oscillate
-      }
-    }
-    else {
-      // master button went high, turn off button break
-      state.masterButtonBreak = false;
-    }
-
-    int highButtons = 0;
-    //check all keys
-    for(int keyIndex = 0; keyIndex<(sizeof(keyArray)/sizeof(int)); keyIndex++) {
-      int key = keyArray[keyIndex];
-      if(digitalRead(key) == LOW) {
-
-        if(!state.keyButtonBreak) {
-          // that key is being pushed, add it to the combo
-
-          //now register the button into the entered combination arrays.
-          state.entered_combo[state.enteredComboLength] = key;
-          state.enteredComboLength++;
-
-          tone(misc.speaker, fetchAssociatedNote(key), 300);
-
-          state.keyButtonBreak = true; // enable button break for all keys
-
-          delay(50);  // needed because button appears to oscillate
+          state.masterButtonBreak = true; // enable button break
         }
       }
       else {
-        // a button went high, only disable button break if all buttons went high.
-        highButtons++;
+        // master button went high, turn off button break
+        state.masterButtonBreak = false;
       }
-    }
 
-    if(highButtons == sizeof(keyArray)/sizeof(int)) {
-      // all buttons were high, disable button break
-      state.keyButtonBreak = false;
+      int highButtons = 0;
+      //check all keys
+      for(int keyIndex = 0; keyIndex<(sizeof(keyArray)/sizeof(int)); keyIndex++) {
+        int key = keyArray[keyIndex];
+        if(digitalRead(key) == LOW) {
+
+          if(!state.keyButtonBreak) {
+            // that key is being pushed, add it to the combo
+
+            //now register the button into the entered combination arrays.
+            state.entered_combo[state.enteredComboLength] = key;
+            state.enteredComboLength++;
+
+            tone(misc.speaker, fetchAssociatedNote(key), 300);
+
+            state.keyButtonBreak = true; // enable button break for all keys
+          }
+        }
+        else {
+          // a button went high, only disable button break if all buttons went high.
+          highButtons++;
+        }
+      }
+
+      if(highButtons == sizeof(keyArray)/sizeof(int)) {
+        // all buttons were high, disable button break
+        state.keyButtonBreak = false;
+      }
     }
   }
 }
