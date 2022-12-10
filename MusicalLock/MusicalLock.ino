@@ -7,7 +7,7 @@ using note_freq = float;
 unsigned int ledBlinkInterval = 100;
 unsigned int ledBlinkTimes = 8;
 
-unsigned int buttonTimeout = 50;
+unsigned int buttonTimeout = 5;
 
 
 
