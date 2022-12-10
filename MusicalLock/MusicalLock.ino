@@ -251,7 +251,7 @@ void checkKeys() {  //checks button input
             state.entered_combo[state.enteredComboLength] = key;
             state.enteredComboLength++;
 
-            tone(misc.speaker, fetchAssociatedNote(key), 300);
+            tone(misc.speaker, fetchAssociatedNote(key), 500);
 
             state.keyButtonBreak = true; // enable button break for all keys
           }
